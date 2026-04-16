@@ -1,0 +1,31 @@
+# Environments
+.env
+venv/
+env/
+ENV/
+
+# Node
+node_modules/
+dist/
+.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Database
+*.db
+doc_platform.db
+
+# Misc
+.DS_Store
+scratch.py
+faiss_store/
+test.pdf
+dummy.pdf
+dummy.txt
+.vscode/
+.idea/
+.sixth/
