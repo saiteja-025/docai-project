@@ -1,10 +1,12 @@
-FROM python:3.10
+FROM python:3.10-slim
 
 WORKDIR /app
 
-COPY . .
+COPY backend/requirements.txt .
 
 RUN pip install --upgrade pip
-RUN pip install -r backend/requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
 
 CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
