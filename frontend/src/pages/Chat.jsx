@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, FileText, Bot, User as UserIcon, Loader2, MessageSquareOff } from 'lucide-react';
+import { Send, FileText, Bot, User as UserIcon, Loader2, MessageSquareOff, Trash2 } from 'lucide-react';
 import axios from 'axios';
 import clsx from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -16,6 +16,7 @@ export default function Chat() {
   const location = useLocation();
   const [documents, setDocuments] = useState([]);
   const [selectedDocId, setSelectedDocId] = useState(location.state?.selectedDocId || null);
+  const [messagesCache, setMessagesCache] = useState({});
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -44,6 +45,14 @@ export default function Chat() {
   // Fetch history when doc changes
   useEffect(() => {
     if (!selectedDocId) return;
+    
+    // Load from cache instantly if available to prevent flicker
+    if (messagesCache[selectedDocId]) {
+       setMessages(messagesCache[selectedDocId]);
+    } else {
+       setMessages([]);
+    }
+    
     const fetchHistory = async () => {
       try {
         const token = localStorage.getItem('docToken');
@@ -51,6 +60,7 @@ export default function Chat() {
           headers: { Authorization: `Bearer ${token}` }
         });
         setMessages(res.data);
+        setMessagesCache(prev => ({ ...prev, [selectedDocId]: res.data }));
       } catch (err) {
         console.error(err);
       }
@@ -71,13 +81,35 @@ export default function Chat() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isSending]);
 
+  const handleDelete = async (e, docId) => {
+    e.stopPropagation();
+    if (!window.confirm("Are you sure you want to delete this document?")) return;
+    
+    try {
+      const token = localStorage.getItem('docToken');
+      await axios.delete(`${API_BASE_URL}/documents/${docId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setDocuments(prev => prev.filter(d => d.id !== docId));
+      if (selectedDocId === docId) {
+        setSelectedDocId(null);
+        setMessages([]);
+      }
+    } catch (err) {
+      console.error("Failed to delete document", err);
+      alert("Failed to delete document.");
+    }
+  };
+
   const handleSend = async (e) => {
     e.preventDefault();
     if (!input.trim() || !selectedDocId || isSending) return;
 
     const userMessage = input.trim();
     setInput('');
-    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+    const userMsgObj = { role: 'user', content: userMessage };
+    setMessages(prev => [...prev, userMsgObj]);
+    setMessagesCache(prev => ({ ...prev, [selectedDocId]: [...(prev[selectedDocId] || []), userMsgObj] }));
     setIsSending(true);
 
     try {
@@ -86,7 +118,9 @@ export default function Chat() {
         { query: userMessage },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      setMessages(prev => [...prev, { role: 'ai', content: res.data.reply }]);
+      const aiMsgObj = { role: 'ai', content: res.data.reply };
+      setMessages(prev => [...prev, aiMsgObj]);
+      setMessagesCache(prev => ({ ...prev, [selectedDocId]: [...(prev[selectedDocId] || []), aiMsgObj] }));
     } catch (err) {
       console.error(err);
       setMessages(prev => [...prev, { role: 'ai', content: "Sorry, I encountered an error. Please try again." }]);
@@ -119,24 +153,40 @@ export default function Chat() {
             </div>
           ) : (
             documents.map(doc => (
-              <button
+              <div
                 key={doc.id}
-                onClick={() => setSelectedDocId(doc.id)}
                 className={cn(
-                  "w-full text-left p-4 rounded-xl border transition-all text-sm font-medium",
+                  "w-full flex items-center justify-between p-2 pr-3 rounded-xl border transition-all text-sm font-medium",
                   selectedDocId === doc.id
                     ? "bg-blue-600 border-blue-500 text-white shadow-md shadow-blue-500/20"
                     : "bg-background border-border text-foreground hover:border-blue-500/50 hover:bg-card"
                 )}
               >
-                <div className="line-clamp-2">{doc.title}</div>
-                <div className={cn(
-                  "text-[10px] mt-2 font-medium uppercase tracking-wider",
-                  selectedDocId === doc.id ? "text-blue-100" : "text-muted-foreground"
-                )}>
-                  Ready for Chat
-                </div>
-              </button>
+                <button
+                  onClick={() => setSelectedDocId(doc.id)}
+                  className="text-left flex-1 pl-2 py-2"
+                >
+                  <div className="line-clamp-2">{doc.title}</div>
+                  <div className={cn(
+                    "text-[10px] mt-1 font-medium uppercase tracking-wider",
+                    selectedDocId === doc.id ? "text-blue-100" : "text-muted-foreground"
+                  )}>
+                    Ready for Chat
+                  </div>
+                </button>
+                <button
+                  onClick={(e) => handleDelete(e, doc.id)}
+                  className={cn(
+                    "shrink-0 p-2 rounded-lg transition-colors ml-2",
+                    selectedDocId === doc.id 
+                      ? "hover:bg-white/20 text-white/80 hover:text-white"
+                      : "hover:bg-red-500/10 text-muted-foreground hover:text-red-500"
+                  )}
+                  title="Delete Document"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
             ))
           )}
         </div>

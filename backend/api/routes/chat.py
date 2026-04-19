@@ -29,13 +29,17 @@ def chat_document(
         db.add(chat_session)
         db.commit()
         db.refresh(chat_session)
+        
+    # Fetch existing chat history for context
+    history_messages = db.query(ChatMessage).filter(ChatMessage.session_id == chat_session.id).order_by(ChatMessage.created_at.asc()).all()
+    chat_history = [(m.role, m.content) for m in history_messages]
     
     # Save user message
     user_msg = ChatMessage(session_id=chat_session.id, role="user", content=request.query)
     db.add(user_msg)
     
-    # Get AI response from RAG
-    ai_response_text = chat_with_document(str(doc_id), request.query)
+    # Get AI response from RAG with history
+    ai_response_text = chat_with_document(str(doc_id), request.query, chat_history)
     
     # Save AI message
     ai_msg = ChatMessage(session_id=chat_session.id, role="ai", content=ai_response_text)

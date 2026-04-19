@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     # External APIs
     GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
     CLOUDINARY_URL: str = os.getenv("CLOUDINARY_URL", "")
+    PINECONE_API_KEY: str = os.getenv("PINECONE_API_KEY", "")
+    PINECONE_ENV: str = os.getenv("PINECONE_ENV", "")
+    PINECONE_INDEX: str = os.getenv("PINECONE_INDEX", "rag-index")
     
     class Config:
         case_sensitive = True

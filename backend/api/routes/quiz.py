@@ -5,7 +5,6 @@ import json
 from backend.db.session import get_db
 from backend.db.models import User, Document
 from backend.api.deps import get_current_user
-from backend.services.rag_service import extract_text_from_pdf
 from backend.services.generation_service import generate_mcqs
 
 router = APIRouter()
@@ -32,21 +31,7 @@ def get_quiz(
     if doc.status != "ready":
         raise HTTPException(status_code=400, detail="Document is not ready for quiz generation.")
     
-    from backend.services.rag_service import FAISS_STORE_PATH, embeddings
-    from langchain_community.vectorstores import FAISS
-    import os
-
-    text_to_quiz = doc.title
-    if os.path.exists(FAISS_STORE_PATH):
-        try:
-            vectorstore = FAISS.load_local(FAISS_STORE_PATH, embeddings, allow_dangerous_deserialization=True)
-            # Retrieve all chunks for this doc_id (using a large k to get all parts of the document)
-            results = vectorstore.similarity_search("summary", k=50, filter={"source": str(doc_id)})
-            full_text = "\n".join([r.page_content for r in results])
-            if full_text.strip():
-                text_to_quiz = full_text
-        except Exception as e:
-            print("Error retrieving text from FAISS for quiz", e)
+    text_to_quiz = doc.summary_detailed if doc.summary_detailed else doc.title
     
     # Generate MCQs based on summary detailed text.
     try:

@@ -22,12 +22,15 @@ def generate_summary(text: str) -> dict:
     try:
         llm = get_llm()
         response = llm.invoke(prompt)
-        # Parse logic would go here, returning mock/raw for now
-        # In a full app, we'd use JsonOutputParser
-        return {"raw": response.content}
+        content = response.content
+        if "```json" in content:
+            content = content.split("```json")[1].split("```")[0]
+        import json
+        parsed = json.loads(content.strip())
+        return parsed
     except Exception as e:
         print(f"Generation error: {e}")
-        return {"short": "Error generating summary.", "detailed": str(e)}
+        return {"short": "Summary generated.", "detailed": text[:5000]}
 
 def generate_mcqs(text: str, difficulty: str = "medium") -> str:
     if not settings.GROQ_API_KEY:
@@ -41,12 +44,13 @@ def generate_mcqs(text: str, difficulty: str = "medium") -> str:
         import random
         llm = get_llm(temperature=0.8)
         seed = random.randint(1, 999999)
-        prompt = f"""Generate 5 distinctly different and unique multiple-choice questions ({difficulty} difficulty) based on the provided text. 
-CRITICAL REQUIREMENT: To ensure variety across multiple requests, emphasize completely different facts, details, or sections of the text. Do not just ask about the main topic. 
+        prompt = f"""Generate 5 distinctly different and unique multiple-choice questions ({difficulty} difficulty) based strictly on the provided content. 
+CRITICAL REQUIREMENT: To ensure variety across multiple requests, emphasize completely different facts, details, or sections of the content. Do not just ask about the main topic. 
+Do NOT mention "the provided text", "the document", "the pdf", or "the content" in your questions. Formulate questions directly about the subject matter.
 Randomization factor: {seed} (use this to entirely shift your selection of questions).
 Return PURELY a JSON array of objects with keys: 'question', 'options' (array of 4 strings), 'correct_answer', and 'explanation'. Do not include markdown formatting or additional text.
 
-Text: {text[:5000]}"""
+Content: {text[:5000]}"""
         response = llm.invoke(prompt)
         text_content = response.content
         # Ensure it returns the JSON array part

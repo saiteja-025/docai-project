@@ -22,6 +22,31 @@ export default function Quizzes() {
   const [answers, setAnswers] = useState({});
   const [showResults, setShowResults] = useState(false);
   const [difficulty, setDifficulty] = useState('medium');
+  const [quizCache, setQuizCache] = useState({});
+
+  useEffect(() => {
+    if (selectedDocId) {
+      setQuizCache(prev => ({
+        ...prev,
+        [selectedDocId]: { questions, answers, showResults, difficulty }
+      }));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [questions, answers, showResults, difficulty, selectedDocId]);
+
+  const handleSelectDoc = (docId) => {
+    setSelectedDocId(docId);
+    if (quizCache[docId]) {
+       setQuestions(quizCache[docId].questions);
+       setAnswers(quizCache[docId].answers);
+       setShowResults(quizCache[docId].showResults);
+       setDifficulty(quizCache[docId].difficulty || 'medium');
+    } else {
+       setQuestions(null);
+       setAnswers({});
+       setShowResults(false);
+    }
+  };
 
   useEffect(() => {
     const fetchDocs = async () => {
@@ -49,7 +74,7 @@ export default function Quizzes() {
     
     try {
       const token = localStorage.getItem('docToken');
-      const res = await axios.get(`${API_BASE_URL}/quiz/${selectedDocId}?difficulty=${difficulty}`, {
+      const res = await axios.get(`${API_BASE_URL}/quiz/${selectedDocId}?difficulty=${difficulty}&t=${Date.now()}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setQuestions(res.data.questions);
@@ -120,12 +145,7 @@ export default function Quizzes() {
             documents.map(doc => (
               <button
                 key={doc.id}
-                onClick={() => {
-                  setSelectedDocId(doc.id);
-                  setQuestions(null);
-                  setShowResults(false);
-                  setAnswers({});
-                }}
+                onClick={() => handleSelectDoc(doc.id)}
                 className={cn(
                   "w-full text-left p-4 rounded-xl border transition-all text-sm font-medium",
                   selectedDocId === doc.id

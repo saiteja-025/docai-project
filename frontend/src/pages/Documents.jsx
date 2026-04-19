@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FileText, UploadCloud, Loader2, CheckCircle2, AlertCircle, Trash2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
@@ -11,6 +12,7 @@ export default function Documents() {
   const [isDragging, setIsDragging] = useState(false);
   const [isLoadingList, setIsLoadingList] = useState(true);
   const fileInputRef = useRef(null);
+  const navigate = useNavigate();
 
   const fetchDocuments = async () => {
     try {
@@ -79,6 +81,21 @@ export default function Documents() {
     setIsDragging(false);
     const file = e.dataTransfer.files[0];
     handleUpload(file);
+  };
+
+  const handleDelete = async (docId) => {
+    if (!window.confirm("Are you sure you want to delete this document?")) return;
+    
+    try {
+      const token = localStorage.getItem('docToken');
+      await axios.delete(`${API_BASE_URL}/documents/${docId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      fetchDocuments();
+    } catch (err) {
+      console.error("Failed to delete document", err);
+      alert("Failed to delete document.");
+    }
   };
 
   return (
@@ -190,12 +207,15 @@ export default function Documents() {
                     <button 
                       disabled={doc.status !== 'ready'}
                       className="flex-1 bg-secondary text-secondary-foreground hover:bg-secondary/80 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      onClick={() => window.location.href='/chat'}
+                      onClick={() => navigate('/chat', { state: { selectedDocId: doc.id } })}
                     >
                       Chat With Doc
                     </button>
-                    {/* Delete Placeholder */}
-                    <button className="px-3 bg-red-500/5 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors">
+                    <button 
+                      onClick={() => handleDelete(doc.id)}
+                      className="px-3 bg-red-500/5 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+                      title="Delete Document"
+                    >
                       <Trash2 size={16} />
                     </button>
                   </div>

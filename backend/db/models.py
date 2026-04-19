@@ -11,9 +11,9 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     
-    documents = relationship("Document", back_populates="owner")
-    chats = relationship("ChatSession", back_populates="user")
-    quiz_results = relationship("QuizResult", back_populates="user")
+    documents = relationship("Document", back_populates="owner", cascade="all, delete-orphan")
+    chats = relationship("ChatSession", back_populates="user", cascade="all, delete-orphan")
+    quiz_results = relationship("QuizResult", back_populates="user", cascade="all, delete-orphan")
 
 class Document(Base):
     __tablename__ = "documents"
@@ -29,8 +29,8 @@ class Document(Base):
     owner_id = Column(Integer, ForeignKey("users.id"))
     
     owner = relationship("User", back_populates="documents")
-    chat_sessions = relationship("ChatSession", back_populates="document")
-    quizzes = relationship("Quiz", back_populates="document")
+    chat_sessions = relationship("ChatSession", back_populates="document", cascade="all, delete-orphan")
+    quizzes = relationship("Quiz", back_populates="document", cascade="all, delete-orphan")
 
 class ChatSession(Base):
     __tablename__ = "chat_sessions"
@@ -65,7 +65,7 @@ class Quiz(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     
     document = relationship("Document", back_populates="quizzes")
-    results = relationship("QuizResult", back_populates="quiz")
+    results = relationship("QuizResult", back_populates="quiz", cascade="all, delete-orphan")
 
 class QuizResult(Base):
     __tablename__ = "quiz_results"

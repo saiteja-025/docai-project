@@ -17,7 +17,6 @@ export default function Sidebar({ isDark, toggleDark }) {
     { name: 'Documents', path: '/documents', icon: <FileText size={20} /> },
     { name: 'Chat', path: '/chat', icon: <MessageSquare size={20} /> },
     { name: 'Quizzes', path: '/quizzes', icon: <BrainCircuit size={20} /> },
-    { name: 'Settings', path: '/settings', icon: <Settings size={20} /> },
   ];
 
   const handleLogout = () => {
