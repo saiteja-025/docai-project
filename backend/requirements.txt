@@ -7,7 +7,7 @@ langchain==0.1.13
 langchain-groq==0.1.0
 langchain-community==0.0.29
 
-sentence-transformers==2.2.2
+transformers
 
 PyPDF2
 python-docx
