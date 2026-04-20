@@ -83,11 +83,15 @@ export default function Documents() {
     handleUpload(file);
   };
 
-  const handleDelete = async (docId) => {
-    if (!window.confirm("Are you sure you want to delete this document?")) return;
+  const handleDelete = async (e, docId) => {
+    e.stopPropagation();
+    e.preventDefault();
     
     try {
       const token = localStorage.getItem('docToken');
+      // Optimistic delete for immediate feedback
+      setDocuments(prev => prev.filter(d => d.id !== docId));
+      
       await axios.delete(`${API_BASE_URL}/documents/${docId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -95,6 +99,7 @@ export default function Documents() {
     } catch (err) {
       console.error("Failed to delete document", err);
       alert("Failed to delete document.");
+      fetchDocuments(); // restore if failed
     }
   };
 
@@ -212,7 +217,7 @@ export default function Documents() {
                       Chat With Doc
                     </button>
                     <button 
-                      onClick={() => handleDelete(doc.id)}
+                      onClick={(e) => handleDelete(e, doc.id)}
                       className="px-3 bg-red-500/5 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
                       title="Delete Document"
                     >

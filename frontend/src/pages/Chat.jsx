@@ -83,7 +83,6 @@ export default function Chat() {
 
   const handleDelete = async (e, docId) => {
     e.stopPropagation();
-    if (!window.confirm("Are you sure you want to delete this document?")) return;
     
     try {
       const token = localStorage.getItem('docToken');

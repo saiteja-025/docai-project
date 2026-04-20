@@ -91,12 +91,12 @@ export default function Quizzes() {
     setAnswers(prev => ({ ...prev, [qIndex]: option }));
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e) => {
+    if (e) e.preventDefault();
     if (Object.keys(answers).length < questions.length) {
       alert("Please answer all questions before submitting.");
       return;
     }
-    setShowResults(true);
     
     // Persist score directly to sync with Dashboard overview
     const finalScore = calculateScore();
@@ -106,8 +106,12 @@ export default function Quizzes() {
         { score: finalScore, answers_json: JSON.stringify(answers) },
         { headers: { Authorization: `Bearer ${token}` } }
       );
+      setShowResults(true);
+      window.scrollTo(0, 0); // Scroll to top to see score
     } catch (e) {
       console.error("Failed to save score to database", e);
+      alert("Error submitting quiz results.");
+      setShowResults(true); // Still show results even if saving failed
     }
   };
 
@@ -293,7 +297,7 @@ export default function Quizzes() {
               <div className="flex justify-end mt-8">
                 <button 
                   onClick={handleSubmit}
-                  className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-8 rounded-xl transition-all shadow-lg active:scale-95"
+                  className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-8 rounded-xl transition-all shadow-lg active:scale-95 z-50 relative pointer-events-auto"
                 >
                   Submit Quiz
                 </button>
