@@ -1,69 +1,194 @@
-# Document Intelligence Platform 🧠
+# 🧠 Document Intelligence Platform
 
-A production-ready SaaS built with React, FastAPI, Groq (LLaMA/Mixtral), huggingface embeddings, and FAISS for RAG document interaction. This platform allows you to upload PDFs, generate short and detailed summaries, take AI-generated quizzes, and chat with your files.
-
-## 🚀 Key Features
-- **Document Management**: Drag and drop PDF uploads with background processing.
-- **RAG Chat System**: Context-aware chatting grounded purely in uploaded documents.
-- **Smart Summarization**: Multi-format summaries (brief + bulleted detail).
-- **AI Quizzes**: Auto-generate MCQs and test your knowledge.
-- **Premium UX**: Framer Motion animations, Lucide icons, Dark/Light modes, Glassmorphism.
-
-## 🏗 Tech Stack
-- **Frontend**: Vite + React, TailwindCSS v4, Framer Motion
-- **Backend**: FastAPI, SQLAlchemy, PostgreSQL
-- **Vector DB**: FAISS (Local filesystem)
-- **AI Models**: Groq API (Inference), HuggingFace `sentence-transformers` (Embeddings)
-- **File Storage**: Cloudinary
+> 🚀 AI-powered document analysis system using RAG (Retrieval-Augmented Generation)
+> Transform PDFs into interactive knowledge with summaries, quizzes, and contextual chat.
 
 ---
 
-## 🛠 Local Setup Instructions
+## 🌟 Overview
 
-### 1. Backend Setup
-1. Open terminal in the `backend/` directory.
-2. Create virtualenv: `python -m venv venv`
-3. Activate virtualenv: 
-   - Windows: `.\venv\Scripts\activate`
-   - Mac/Linux: `source venv/bin/activate`
-4. Install dependencies: `pip install -r requirements.txt`
-5. Setup database: Run `docker-compose up -d` from root to start PostgreSQL.
-6. Configure ENV: Copy `.env.example` to `.env` and fill:
-   - `GROQ_API_KEY`
-   - `CLOUDINARY_URL`
-7. Start Server: `uvicorn main:app --reload` (Runs on port 8000)
+The **Document Intelligence Platform** is a full-stack AI application that enables users to upload documents and interact with them using advanced language models.
 
-### 2. Frontend Setup
-1. Open terminal in the `frontend/` directory.
-2. Install NodeJS if you haven't.
-3. Install dependencies: `npm install`
-4. Create `frontend/.env` and add: `VITE_API_BASE_URL=http://localhost:8000`
-5. Start app: `npm run dev` (Runs on port 5173)
+It combines **FastAPI + React + LLMs + Vector Search** to deliver a production-ready SaaS experience.
 
 ---
 
-## 🌎 Deployment Guide (Free Tier)
+## ✨ Key Features
 
-### Frontend (Vercel)
-1. Push this repository to GitHub.
-2. Import the project in Vercel.
-3. Set the Root Directory to `frontend`.
-4. Framework Preset will auto-detect Vite. Add Environment Variable `VITE_API_BASE_URL` pointing to your Render server.
+* 📂 **Document Upload & Management**
 
-### Database (Render or Neon.tech)
-1. Provision a free PostgreSQL database.
-2. Note the connection string.
+  * Drag-and-drop PDF uploads
+  * Background processing pipeline
 
-### File Storage (Cloudinary)
-1. Create a free Cloudinary account.
-2. Get your `CLOUDINARY_URL`.
+* 🤖 **RAG-based AI Chat**
 
-### Backend (Render & Background tasks)
-1. Create a new Web Service on Render, connect your GitHub.
-2. Set Root Directory to `backend`.
-3. Set Environment to Python 3.
-4. Build Command: `pip install -r requirements.txt`
-5. Start Command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
-6. Add Environment Variables: `DATABASE_URL`, `GROQ_API_KEY`, `CLOUDINARY_URL`, `SECRET_KEY`.
+  * Context-aware responses grounded in documents
+  * No hallucinations — answers strictly from uploaded files
 
-> **Note**: Render's free tier has an ephemeral disk. FAISS stores currently rely on local storage, meaning vector embeddings will clear on backend restart. For scale, connect a managed VectorDB (like Pinecone) or attach a persistent Render disk (paid).
+* 📝 **Smart Summarization**
+
+  * Short summaries
+  * Detailed bullet-point insights
+
+* 🧪 **AI Quiz Generator**
+
+  * Auto-generated MCQs from documents
+  * Interactive knowledge testing
+
+* 🎨 **Premium UI/UX**
+
+  * Dark/Light mode
+  * Glassmorphism design
+  * Smooth animations (Framer Motion)
+
+---
+
+## 🏗️ Tech Stack
+
+### 🔹 Frontend
+
+* React (Vite)
+* TailwindCSS
+* Framer Motion
+* Lucide Icons
+
+### 🔹 Backend
+
+* FastAPI
+* SQLAlchemy
+* PostgreSQL
+
+### 🔹 AI & ML
+
+* Groq API (LLaMA / Mixtral)
+* HuggingFace Embeddings
+* RAG Architecture
+
+### 🔹 Vector Database
+
+* FAISS (local vector storage)
+
+### 🔹 Storage
+
+* Cloudinary (file storage)
+
+---
+
+## 🧠 System Architecture
+
+```id="arch01"
+User → React Frontend → FastAPI Backend → AI Models (Groq)
+                                   ↓
+                             FAISS Vector DB
+                                   ↓
+                             Context Retrieval
+```
+
+---
+
+## ⚙️ Local Setup Guide
+
+### 🔹 1. Clone Repository
+
+```bash id="cmd01"
+git clone https://github.com/saiteja-025/docai-project.git
+cd docai-project
+```
+
+---
+
+### 🔹 2. Backend Setup
+
+```bash id="cmd02"
+cd backend
+python -m venv venv
+venv\Scripts\activate   # Windows
+pip install -r requirements.txt
+uvicorn main:app --reload
+```
+
+👉 Runs on: `http://127.0.0.1:8000`
+
+---
+
+### 🔹 3. Frontend Setup
+
+```bash id="cmd03"
+cd frontend
+npm install
+npm run dev
+```
+
+👉 Runs on: `http://localhost:5173`
+
+---
+
+### 🔹 4. Environment Variables
+
+Create `.env` in backend:
+
+```env id="env01"
+GROQ_API_KEY=your_key
+CLOUDINARY_URL=your_url
+SECRET_KEY=your_secret
+```
+
+---
+
+## 📸 Demo (Local)
+
+👉 Run backend + frontend locally to explore:
+
+* Document upload
+* Chat with PDF
+* AI summary generation
+* Quiz creation
+
+---
+
+## 🚧 Deployment Note
+
+Due to heavy AI dependencies (FAISS, embeddings, etc.),
+deployment on free platforms is limited.
+
+👉 Recommended approaches:
+
+* Docker-based deployment
+* Cloud platforms (AWS / GCP / Railway)
+
+---
+
+## 🔮 Future Enhancements
+
+* 🌐 Deploy scalable vector DB (Pinecone)
+* 📊 Analytics dashboard
+* 📱 Mobile-friendly UI
+* 🧠 Multi-document reasoning
+
+---
+
+## 📌 Highlights
+
+✔ End-to-end AI SaaS architecture
+✔ Real-world RAG implementation
+✔ Clean UI + backend separation
+✔ Production-ready structure
+
+---
+
+## 👨‍💻 Author
+
+**Saiteja Kandagatla**
+🔗 GitHub: https://github.com/saiteja-025
+
+---
+
+## ⭐ Support
+
+If you found this project useful:
+
+👉 Star the repo
+👉 Share feedback
+👉 Connect on LinkedIn
+
+---
