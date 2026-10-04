@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: docai-app
+    env: docker
+    plan: free
+    dockerfilePath: Dockerfile
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: docai-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: GROQ_API_KEY
+        sync: false
+      - key: CLOUDINARY_URL
+        sync: false
+
+databases:
+  - name: docai-db
+    plan: free
+    databaseName: doc_platform
+    user: doc_user

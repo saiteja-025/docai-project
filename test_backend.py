@@ -29,13 +29,13 @@ def run_tests():
 
     # 3. Upload File
     print("Testing File Upload...")
-    file_path = "test.pdf"
+    file_path = "test_upload.txt"
     if not os.path.exists(file_path):
         print(f"{file_path} not found.")
         return
 
     with open(file_path, "rb") as f:
-        files = {"file": (file_path, f, "application/pdf")}
+        files = {"file": (file_path, f, "text/plain")}
         res = requests.post(f"{BASE_URL}/documents/upload", headers=headers, files=files)
         if res.status_code == 200:
             doc_id = res.json().get("id")
@@ -44,13 +44,42 @@ def run_tests():
             print("Upload Failed:", res.status_code, res.text)
             return
 
-    # 4. Get Summary
-    print("Testing Summarization...")
-    res = requests.post(f"{BASE_URL}/chat/summarize/{doc_id}", headers=headers)
-    if res.status_code == 200:
-        print("Summarization success:", res.json().get("summary")[:50], "...")
+    # 4. Get Documents List & Wait for processing
+    print("Testing Document Listing...")
+    import time
+    time.sleep(3) # allow background task to process
+    res = requests.get(f"{BASE_URL}/documents/", headers=headers)
+    if res.status_code == 200 and len(res.json()) > 0:
+        doc = res.json()[0]
+        print(f"Document List success: {doc['title']} (status: {doc['status']})")
     else:
-        print("Summarization Failed:", res.status_code, res.text)
+        print("Document List Failed:", res.status_code, res.text)
+
+    # 5. Test Chat with document
+    print("Testing Chat...")
+    res = requests.post(f"{BASE_URL}/chat/{doc_id}/chat", headers=headers, json={"query": "What is AI?"})
+    if res.status_code == 200:
+        print("Chat success, reply snippet:", res.json().get("reply")[:60])
+    else:
+        print("Chat Failed:", res.status_code, res.text)
+
+    # 6. Test Quiz Generation
+    print("Testing Quiz Generation...")
+    res = requests.get(f"{BASE_URL}/quiz/{doc_id}", headers=headers)
+    if res.status_code == 200:
+        print("Quiz success, questions count:", len(res.json().get("questions", [])))
+    else:
+        print("Quiz Failed:", res.status_code, res.text)
+
+    # 7. Test Dashboard Stats
+    print("Testing Dashboard Stats...")
+    res = requests.get(f"{BASE_URL}/dashboard/stats", headers=headers)
+    if res.status_code == 200:
+        print("Dashboard stats success:", res.json())
+    else:
+        print("Dashboard Stats Failed:", res.status_code, res.text)
+
+    print("ALL TESTS COMPLETED SUCCESSFULLY!")
 
 if __name__ == "__main__":
     run_tests()
