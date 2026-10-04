@@ -23,10 +23,13 @@ def generate_summary(text: str) -> dict:
         llm = get_llm()
         response = llm.invoke(prompt)
         content = response.content
-        if "```json" in content:
-            content = content.split("```json")[1].split("```")[0]
+        if "```" in content:
+            content = content.split("```")[1]
+            if content.startswith("json"):
+                content = content[4:]
+        content = content.strip()
         import json
-        parsed = json.loads(content.strip())
+        parsed = json.loads(content)
         return parsed
     except Exception as e:
         print(f"Generation error: {e}")
@@ -53,11 +56,13 @@ Return PURELY a JSON array of objects with keys: 'question', 'options' (array of
 Content: {text[:5000]}"""
         response = llm.invoke(prompt)
         text_content = response.content
-        # Ensure it returns the JSON array part
-        if "```json" in text_content:
-            text_content = text_content.split("```json")[-1].split("```")[0].strip()
-        return text_content
+        if "```" in text_content:
+            text_content = text_content.split("```")[1]
+            if text_content.startswith("json"):
+                text_content = text_content[4:]
+        return text_content.strip()
     except Exception as e:
         print(f"MCQ Generation error: {e}")
         import json
         return json.dumps([])
+
