@@ -15,6 +15,12 @@ services:
         sync: false
       - key: CLOUDINARY_URL
         sync: false
+      # Ensures the runtime container finds the model pre-cached during build.
+      - key: SENTENCE_TRANSFORMERS_HOME
+        value: /app/.cache/sentence_transformers
+      # Clean Python output in Render logs
+      - key: PYTHONUNBUFFERED
+        value: "1"
 
 databases:
   - name: docai-db

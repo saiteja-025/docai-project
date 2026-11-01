@@ -24,13 +24,17 @@ def process_document_background(file_bytes: bytes, doc_id: int, filename: str):
         if doc:
             import json
             doc.status = "ready"
-            
+
+            # Persist raw extracted text so FAISS can be rebuilt from the DB
+            # on every container restart (free alternative to a persistent disk).
+            doc.content_text = text
+
             short_summary = summary.get("short", "")
             doc.summary_short = json.dumps(short_summary) if isinstance(short_summary, (dict, list)) else str(short_summary)
-            
+
             detailed_summary = summary.get("detailed", "")
             doc.summary_detailed = json.dumps(detailed_summary) if isinstance(detailed_summary, (dict, list)) else str(detailed_summary)
-            
+
             db.commit()
     except Exception as e:
         print(f"Error processing document: {e}")

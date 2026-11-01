@@ -22,6 +22,9 @@ class Document(Base):
     title = Column(String, nullable=False)
     cloudinary_url = Column(String, nullable=False)
     faiss_index_path = Column(String, nullable=True) # local path or identifier
+    # content_text persists the raw extracted text so the FAISS index can be
+    # rebuilt from PostgreSQL after a container restart (no paid disk needed).
+    content_text = Column(Text, nullable=True)
     summary_short = Column(Text, nullable=True)
     summary_detailed = Column(Text, nullable=True)
     status = Column(String, default="processing") # processing, ready, failed

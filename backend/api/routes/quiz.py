@@ -49,7 +49,10 @@ def submit_quiz(
     current_user: User = Depends(get_current_user)
 ):
     from backend.db.models import QuizResult
+    # quiz_id=0 is not a valid FK reference; store None (column is nullable)
+    valid_quiz_id = request.quiz_id if request.quiz_id and request.quiz_id > 0 else None
     result = QuizResult(
+        quiz_id=valid_quiz_id,
         user_id=current_user.id,
         score=request.score,
         answers_json=request.answers_json
