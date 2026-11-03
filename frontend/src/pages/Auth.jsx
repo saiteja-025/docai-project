@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BrainCircuit, Mail, Lock, ArrowRight, Loader2, CheckCircle2 } from 'lucide-react';
+import { BrainCircuit, Mail, Lock, ArrowRight, Loader2, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
@@ -9,6 +9,7 @@ export default function Auth({ setToken }) {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -53,6 +54,7 @@ export default function Auth({ setToken }) {
     setError('');
     setSuccessMsg('');
     setPassword('');
+    setShowPassword(false);
   };
 
   return (
@@ -160,14 +162,22 @@ export default function Auth({ setToken }) {
                 <div className="relative group">
                   <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-blue-500 transition-colors" size={18} />
                   <input
-                    type="password"
+                    type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-background border-2 border-border/50 rounded-xl py-3 pl-11 pr-4 focus:outline-none focus:border-blue-500 focus:ring-0 transition-all font-medium text-foreground placeholder:text-muted-foreground"
+                    className="w-full bg-background border-2 border-border/50 rounded-xl py-3 pl-11 pr-11 focus:outline-none focus:border-blue-500 focus:ring-0 transition-all font-medium text-foreground placeholder:text-muted-foreground"
                     placeholder="••••••••"
                     required
                     minLength={6}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1"
+                    title={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
                 </div>
               </div>
 
@@ -187,7 +197,7 @@ export default function Auth({ setToken }) {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-3.5 font-bold shadow-lg shadow-blue-600/20 hover:shadow-blue-600/40 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none mt-4"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-3.5 font-bold shadow-lg shadow-blue-600/20 hover:shadow-blue-600/40 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none mt-4 cursor-pointer"
               >
                 {isLoading ? (
                   <Loader2 className="animate-spin" size={20} />
@@ -205,7 +215,7 @@ export default function Auth({ setToken }) {
               <button 
                 type="button"
                 onClick={toggleAuthMode}
-                className="text-blue-600 dark:text-blue-400 hover:underline focus:outline-none"
+                className="text-blue-600 dark:text-blue-400 hover:underline focus:outline-none font-semibold cursor-pointer"
               >
                 {isLogin ? 'Sign up' : 'Sign in'}
               </button>

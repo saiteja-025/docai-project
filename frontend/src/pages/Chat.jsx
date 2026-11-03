@@ -66,7 +66,6 @@ export default function Chat() {
       }
     };
     fetchHistory();
-    // Also clear input 
     setInput('');
   }, [selectedDocId]);
 
@@ -83,6 +82,9 @@ export default function Chat() {
 
   const handleDelete = async (e, docId) => {
     e.stopPropagation();
+    if (!window.confirm("Are you sure you want to delete this document? All associated chats and quizzes will also be deleted.")) {
+      return;
+    }
     
     try {
       const token = localStorage.getItem('docToken');
@@ -122,7 +124,8 @@ export default function Chat() {
       setMessagesCache(prev => ({ ...prev, [selectedDocId]: [...(prev[selectedDocId] || []), aiMsgObj] }));
     } catch (err) {
       console.error(err);
-      setMessages(prev => [...prev, { role: 'ai', content: "Sorry, I encountered an error. Please try again." }]);
+      const errMsg = err.response?.data?.detail || "Sorry, I encountered an error communicating with the AI service. Please try again.";
+      setMessages(prev => [...prev, { role: 'ai', content: errMsg }]);
     } finally {
       setIsSending(false);
     }
@@ -163,7 +166,7 @@ export default function Chat() {
               >
                 <button
                   onClick={() => setSelectedDocId(doc.id)}
-                  className="text-left flex-1 pl-2 py-2"
+                  className="text-left flex-1 pl-2 py-2 cursor-pointer"
                 >
                   <div className="line-clamp-2">{doc.title}</div>
                   <div className={cn(
@@ -176,7 +179,7 @@ export default function Chat() {
                 <button
                   onClick={(e) => handleDelete(e, doc.id)}
                   className={cn(
-                    "shrink-0 p-2 rounded-lg transition-colors ml-2",
+                    "shrink-0 p-2 rounded-lg transition-colors ml-2 cursor-pointer",
                     selectedDocId === doc.id 
                       ? "hover:bg-white/20 text-white/80 hover:text-white"
                       : "hover:bg-red-500/10 text-muted-foreground hover:text-red-500"
@@ -311,7 +314,7 @@ export default function Chat() {
                 <button
                   type="submit"
                   disabled={!input.trim() || isSending}
-                  className="shrink-0 h-[60px] w-[60px] flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md shadow-blue-500/20 active:scale-95"
+                  className="shrink-0 h-[60px] w-[60px] flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md shadow-blue-500/20 active:scale-95 cursor-pointer"
                 >
                   <Send size={24} className="translate-x-[-1px] translate-y-[1px]" />
                 </button>

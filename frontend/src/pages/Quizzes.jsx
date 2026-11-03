@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { BrainCircuit, FileText, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { BrainCircuit, FileText, Loader2, CheckCircle2, AlertCircle, RotateCcw } from 'lucide-react';
 import axios from 'axios';
 import clsx from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -86,6 +86,12 @@ export default function Quizzes() {
     }
   };
 
+  const handleRetakeQuiz = () => {
+    setAnswers({});
+    setShowResults(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const handleSelectAnswer = (qIndex, option) => {
     if (showResults) return;
     setAnswers(prev => ({ ...prev, [qIndex]: option }));
@@ -97,7 +103,7 @@ export default function Quizzes() {
       alert("Please answer all questions before submitting.");
       return;
     }
-    
+
     // Persist score directly to sync with Dashboard overview
     const finalScore = calculateScore();
     try {
@@ -151,66 +157,80 @@ export default function Quizzes() {
                 key={doc.id}
                 onClick={() => handleSelectDoc(doc.id)}
                 className={cn(
-                  "w-full text-left p-4 rounded-xl border transition-all text-sm font-medium",
+                  "w-full text-left p-4 rounded-xl border transition-all text-sm font-medium cursor-pointer",
                   selectedDocId === doc.id
                     ? "bg-purple-600 border-purple-500 text-white shadow-md shadow-purple-500/20"
                     : "bg-background border-border text-foreground hover:border-purple-500/50 hover:bg-card"
                 )}
               >
                 <div className="line-clamp-2">{doc.title}</div>
+                <div className={cn(
+                  "text-[10px] mt-1 font-medium uppercase tracking-wider",
+                  selectedDocId === doc.id ? "text-purple-200" : "text-muted-foreground"
+                )}>
+                  Ready for Quiz
+                </div>
               </button>
             ))
           )}
         </div>
-        
-        <div className="p-4 border-t border-border">
-          <p className="text-xs text-muted-foreground text-center">Select a document, then use the main panel to start your quiz.</p>
-        </div>
       </div>
 
-      {/* Main Area */}
-      <div className="flex-1 flex flex-col relative z-10 overflow-y-auto p-8">
-        {!questions && !isLoading && (
-          <div className="h-full flex flex-col justify-center items-center text-center">
-            <BrainCircuit size={64} className="text-purple-500/50 mb-6" />
-            
-            {!selectedDocId ? (
-              <div className="opacity-70">
-                <h2 className="text-2xl font-bold text-foreground mb-2">Ready to test your knowledge?</h2>
-                <p className="text-muted-foreground max-w-md">Select a document from the sidebar to begin.</p>
-              </div>
-            ) : (
-              <motion.div initial={{opacity: 0, scale: 0.95}} animate={{opacity: 1, scale: 1}} className="max-w-md w-full bg-card p-8 rounded-3xl border border-border/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-                <h2 className="text-2xl font-bold text-foreground mb-2">Configure Your Quiz</h2>
-                <p className="text-muted-foreground mb-8 text-sm">Select a difficulty level. Our AI will generate unique questions every time.</p>
-                
-                <div className="grid grid-cols-3 gap-3 mb-8">
-                  {['easy', 'medium', 'hard'].map(level => (
-                    <button
-                      key={level}
-                      onClick={() => setDifficulty(level)}
-                      className={cn(
-                        "py-3 px-4 rounded-xl font-semibold capitalize transition-all border-2",
-                        difficulty === level 
-                          ? "border-purple-500 bg-purple-500/10 text-purple-600 dark:text-purple-400" 
-                          : "border-border/50 hover:border-purple-500/50 text-muted-foreground hover:text-foreground"
-                      )}
-                    >
-                      {level}
-                    </button>
-                  ))}
-                </div>
+      {/* Main Content */}
+      <div className="flex-1 overflow-y-auto p-8 relative z-10">
+        {!selectedDocId && (
+          <div className="h-full flex flex-col justify-center items-center text-center opacity-70">
+            <BrainCircuit size={64} className="text-purple-500/40 mb-4" />
+            <h3 className="text-xl font-bold text-foreground">No Document Selected</h3>
+            <p className="text-muted-foreground mt-2 max-w-sm">
+              Please pick an uploaded document from the left to generate customized multiple-choice tests.
+            </p>
+          </div>
+        )}
 
-                <div className="flex justify-center">
-                   <button 
-                     onClick={handleGenerateQuiz}
-                     className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-4 rounded-2xl transition-all shadow-lg active:scale-95 text-lg"
-                   >
-                     Generate Quiz
-                   </button>
-                </div>
-              </motion.div>
-            )}
+        {selectedDocId && !questions && !isLoading && (
+          <div className="h-full flex flex-col justify-center items-center max-w-md mx-auto text-center">
+            <div className="p-4 bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-3xl mb-6">
+               <FileText size={48} />
+            </div>
+            
+            <h3 className="text-2xl font-extrabold text-foreground mb-2">
+              {documents.find(d => d.id === selectedDocId)?.title}
+            </h3>
+            <p className="text-muted-foreground text-sm mb-8 leading-relaxed">
+              Our AI extracts key conceptual hooks, definitions, and facts from this file to craft 5 interactive questions.
+            </p>
+
+            {/* Difficulty Selector */}
+            <div className="w-full mb-8 bg-card p-4 rounded-2xl border border-border">
+              <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-3 text-left">
+                Select Difficulty
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {['easy', 'medium', 'hard'].map(level => (
+                  <button
+                    key={level}
+                    onClick={() => setDifficulty(level)}
+                    className={cn(
+                      "py-2.5 rounded-xl font-semibold capitalize text-sm transition-all cursor-pointer",
+                      difficulty === level 
+                        ? "bg-purple-600 text-white shadow-md shadow-purple-500/20" 
+                        : "bg-background border border-border text-foreground hover:bg-muted"
+                    )}
+                  >
+                    {level}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <button 
+              onClick={handleGenerateQuiz}
+              className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-4 rounded-2xl transition-all shadow-lg shadow-purple-500/25 active:scale-95 text-lg cursor-pointer flex items-center justify-center gap-2"
+            >
+              <BrainCircuit size={20} />
+              Generate Quiz
+            </button>
           </div>
         )}
         
@@ -240,7 +260,6 @@ export default function Quizzes() {
 
             <div className="space-y-6">
               {questions.map((q, qIndex) => {
-                const isAnswered = answers[qIndex] !== undefined;
                 const isCorrect = showResults && answers[qIndex] === q.correct_answer;
                 const isWrong = showResults && answers[qIndex] !== q.correct_answer;
 
@@ -260,7 +279,7 @@ export default function Quizzes() {
                         }
                         
                         if (showResults) {
-                          optionClass = "border-border bg-background/30 text-muted-foreground cursor-default opacity-60"; // default
+                          optionClass = "border-border bg-background/30 text-muted-foreground cursor-default opacity-60";
                           if (opt === q.correct_answer) {
                             optionClass = "border-green-500 bg-green-500/10 text-green-700 dark:text-green-400 font-bold cursor-default opacity-100 ring-2 ring-green-500/20 ring-offset-2 ring-offset-background";
                           } else if (isSelected && isWrong) {
@@ -297,21 +316,21 @@ export default function Quizzes() {
               <div className="flex justify-end mt-8">
                 <button 
                   onClick={handleSubmit}
-                  className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-8 rounded-xl transition-all shadow-lg active:scale-95 z-50 relative pointer-events-auto"
+                  className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-8 rounded-xl transition-all shadow-lg active:scale-95 z-50 relative pointer-events-auto cursor-pointer"
                 >
                   Submit Quiz
                 </button>
               </div>
             ) : (
               <div className="mt-12 bg-card p-8 rounded-3xl border border-border shadow-sm flex flex-col items-center">
-                 <h4 className="text-xl font-bold mb-6 text-foreground">Want to try again?</h4>
+                 <h4 className="text-xl font-bold mb-6 text-foreground">Next Steps</h4>
                  <div className="flex items-center gap-4 mb-8 bg-background p-2 rounded-2xl border border-border/50">
                     {['easy', 'medium', 'hard'].map(level => (
                       <button
                         key={`retake-${level}`}
                         onClick={() => setDifficulty(level)}
                         className={cn(
-                          "py-2 px-6 rounded-xl font-semibold capitalize transition-all",
+                          "py-2 px-6 rounded-xl font-semibold capitalize transition-all cursor-pointer",
                           difficulty === level 
                             ? "bg-purple-500/10 text-purple-600 dark:text-purple-400 shadow-sm border border-purple-500/20" 
                             : "text-muted-foreground hover:text-foreground"
@@ -321,13 +340,22 @@ export default function Quizzes() {
                       </button>
                     ))}
                  </div>
-                 <button 
-                   onClick={handleGenerateQuiz}
-                   className="bg-foreground hover:bg-foreground/90 text-background font-bold py-3 px-8 rounded-xl transition-all shadow-lg active:scale-95 flex items-center gap-2"
-                 >
-                   <BrainCircuit size={18} />
-                   Generate New Unique Questions
-                 </button>
+                 <div className="flex flex-wrap gap-4 justify-center">
+                   <button 
+                     onClick={handleRetakeQuiz}
+                     className="bg-secondary text-secondary-foreground hover:bg-secondary/80 font-bold py-3 px-6 rounded-xl transition-all shadow-sm active:scale-95 flex items-center gap-2 cursor-pointer"
+                   >
+                     <RotateCcw size={18} />
+                     Retake This Quiz
+                   </button>
+                   <button 
+                     onClick={handleGenerateQuiz}
+                     className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg active:scale-95 flex items-center gap-2 cursor-pointer"
+                   >
+                     <BrainCircuit size={18} />
+                     Generate New Unique Questions
+                   </button>
+                 </div>
               </div>
             )}
           </motion.div>

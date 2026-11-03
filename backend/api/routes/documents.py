@@ -11,9 +11,12 @@ router = APIRouter()
 
 MAX_FILE_SIZE = 25 * 1024 * 1024  # 25 MB limit
 
-def process_document_background(file_bytes: bytes, doc_id: int, filename: str):
-    from backend.db.session import SessionLocal
-    db = SessionLocal()
+def process_document_background(file_bytes: bytes, doc_id: int, filename: str, db_session_factory=None):
+    if db_session_factory:
+        db = db_session_factory()
+    else:
+        from backend.db.session import SessionLocal
+        db = SessionLocal()
     try:
         # Process and store in FAISS
         text = process_and_store_document(file_bytes, str(doc_id), filename)

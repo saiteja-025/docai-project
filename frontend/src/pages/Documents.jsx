@@ -93,6 +93,10 @@ export default function Documents() {
   const handleDelete = async (e, docId) => {
     e.stopPropagation();
     e.preventDefault();
+
+    if (!window.confirm("Are you sure you want to delete this document? All associated chats and quizzes will also be deleted.")) {
+      return;
+    }
     
     try {
       const token = localStorage.getItem('docToken');

@@ -67,16 +67,19 @@ def invalidate_vectorstore_cache():
 #   • This means the FAISS index is always consistent with the DB, at the
 #     cost of a one-time rebuild (~1–3 s per document) at startup.
 # ---------------------------------------------------------------------------
-def rebuild_faiss_index_from_db():
+def rebuild_faiss_index_from_db(db_session_factory=None):
     """Rebuild the in-memory FAISS index from all ready documents in the DB.
 
     Called once during application startup so that vector search works
     immediately after a container restart without any paid persistent disk.
     """
-    from backend.db.session import SessionLocal
     from backend.db.models import Document
 
-    db = SessionLocal()
+    if db_session_factory:
+        db = db_session_factory()
+    else:
+        from backend.db.session import SessionLocal
+        db = SessionLocal()
     try:
         docs = (
             db.query(Document)
