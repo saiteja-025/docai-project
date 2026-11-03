@@ -43,7 +43,13 @@ export default function Auth({ setToken }) {
       }
     } catch (err) {
       console.error(err);
-      setError(err.response?.data?.detail || 'An error occurred. Please try again.');
+      const detail = err.response?.data?.detail;
+      const msg = typeof detail === 'string' 
+        ? detail 
+        : Array.isArray(detail) && detail[0]?.msg 
+          ? detail[0].msg 
+          : 'An error occurred. Please try again.';
+      setError(msg);
     } finally {
       setIsLoading(false);
     }
