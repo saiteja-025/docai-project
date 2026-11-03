@@ -6,8 +6,14 @@ except ImportError:
     from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
-from langchain.chains import create_retrieval_chain
-from langchain.chains.combine_documents import create_stuff_documents_chain
+try:
+    from langchain.chains import create_retrieval_chain
+    from langchain.chains.combine_documents import create_stuff_documents_chain
+    from langchain.chains.history_aware_retriever import create_history_aware_retriever
+except ImportError:
+    from langchain_classic.chains import create_retrieval_chain
+    from langchain_classic.chains.combine_documents import create_stuff_documents_chain
+    from langchain_classic.chains.history_aware_retriever import create_history_aware_retriever
 from langchain_core.prompts import ChatPromptTemplate
 from backend.services.generation_service import get_llm
 from backend.core.config import settings
@@ -221,8 +227,6 @@ def chat_with_document(doc_id: str, query: str, chat_history: list = None) -> st
     ])
 
     question_answer_chain = create_stuff_documents_chain(llm, prompt)
-
-    from langchain.chains.history_aware_retriever import create_history_aware_retriever
 
     contextualize_q_system_prompt = (
         "Given a chat history and the latest user question which might reference context in the chat history, "
