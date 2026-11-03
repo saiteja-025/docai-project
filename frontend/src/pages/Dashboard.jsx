@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FileText, Activity, BrainCircuit, TrendingUp } from 'lucide-react';
+import { FileText, Activity, BrainCircuit, TrendingUp, User, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import clsx from 'clsx';
@@ -32,33 +32,47 @@ const StatCard = ({ icon: Icon, label, value, delay }) => (
 export default function Dashboard() {
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
+  const [user, setUser] = useState(null);
   const [documents, setDocuments] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchDashboardData = async () => {
       try {
         const token = localStorage.getItem('docToken');
         if (!token) return;
-        const res = await axios.get(`${API_BASE_URL}/dashboard/stats`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+
+        const authHeader = { headers: { Authorization: `Bearer ${token}` } };
+
+        // Fetch user profile
+        try {
+          const userRes = await axios.get(`${API_BASE_URL}/auth/me`, authHeader);
+          setUser(userRes.data);
+        } catch (e) {
+          console.error("User profile fetch failed", e);
+        }
+
+        // Fetch stats
+        const res = await axios.get(`${API_BASE_URL}/dashboard/stats`, authHeader);
         setStats(res.data);
         
+        // Fetch docs
         try {
-           const docsRes = await axios.get(`${API_BASE_URL}/documents/`, {
-              headers: { Authorization: `Bearer ${token}` }
-           });
-           setDocuments(docsRes.data);
-        } catch (e) { console.error("Docs load failed", e); }
+          const docsRes = await axios.get(`${API_BASE_URL}/documents/`, authHeader);
+          setDocuments(docsRes.data);
+        } catch (e) {
+          console.error("Docs load failed", e);
+        }
       } catch (err) {
         console.error("Failed to fetch dashboard stats", err);
       } finally {
         setIsLoading(false);
       }
     };
-    fetchStats();
+    fetchDashboardData();
   }, []);
+
+  const displayName = user?.email ? user.email.split('@')[0] : 'Explorer';
 
   return (
     <div className="relative h-full w-full bg-background overflow-hidden flex flex-col">
@@ -71,11 +85,21 @@ export default function Dashboard() {
       <div className="relative z-10 flex-1 overflow-y-auto p-8 md:p-12 lg:px-16 w-full max-w-[1600px] mx-auto space-y-10">
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.6, ease: "easeOut" }}>
-            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-foreground to-foreground/70">
-              Welcome back
+            <div className="flex items-center gap-2 mb-2">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                <Sparkles size={12} /> Live AI Workspace
+              </span>
+              {user?.email && (
+                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-muted text-muted-foreground">
+                  <User size={12} /> {user.email}
+                </span>
+              )}
+            </div>
+            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-foreground to-foreground/70 capitalize">
+              Welcome back, {displayName}
             </h1>
             <p className="text-muted-foreground mt-3 text-lg max-w-xl leading-relaxed">
-              Manage your documents and start chatting with your AI assistant.
+              Manage your documents and interact with your AI assistant in real time.
             </p>
           </motion.div>
         </header>

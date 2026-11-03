@@ -1,9 +1,10 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import os
+import time
 
 from backend.core.config import settings
 
@@ -29,20 +30,34 @@ async def lifespan(app: FastAPI):
     else:
         print("[OK] GROQ_API_KEY is configured — AI features enabled.")
 
-    if not settings.CLOUDINARY_URL:
+    has_cloudinary = bool(
+        settings.CLOUDINARY_URL or
+        os.environ.get("CLOUDINARY_URL") or
+        (os.environ.get("CLOUDINARY_CLOUD_NAME") and os.environ.get("CLOUDINARY_API_KEY"))
+    )
+    if not has_cloudinary:
         print(
-            "[WARNING] CLOUDINARY_URL is NOT set.\n"
+            "[WARNING] Cloudinary credentials are NOT set.\n"
             "  Uploaded files will NOT be stored in the cloud (mock URLs will be used).\n"
-            "  Set CLOUDINARY_URL in your environment / Render dashboard to enable cloud storage."
+            "  Set CLOUDINARY_URL or CLOUDINARY_CLOUD_NAME/KEY/SECRET in Render dashboard to enable cloud storage."
         )
     else:
-        print("[OK] CLOUDINARY_URL is configured — cloud file storage enabled.")
+        print("[OK] Cloudinary is configured — cloud file storage enabled.")
 
-    # Database Initialisation — creates tables that don't yet exist
+    # Database Initialisation — creates tables that don't yet exist (with retry for cold starts)
     from backend.db.session import engine
     from backend.db.models import Base
-    Base.metadata.create_all(bind=engine)
-    print("[OK] Database tables verified / created.")
+    for attempt in range(1, 6):
+        try:
+            Base.metadata.create_all(bind=engine)
+            print("[OK] Database tables verified / created.")
+            break
+        except Exception as e:
+            if attempt == 5:
+                print(f"[ERROR] Could not connect to database after 5 attempts: {e}")
+                raise
+            print(f"[RETRY] Database not ready yet ({e}). Retrying in 2s ({attempt}/5)...")
+            time.sleep(2)
 
     # Rebuild FAISS index from PostgreSQL (C2 fix: free persistence across restarts)
     from backend.services.rag_service import rebuild_faiss_index_from_db
@@ -103,8 +118,9 @@ if os.path.exists(frontend_dist):
 
     @app.get("/{full_path:path}")
     def serve_frontend(full_path: str):
-        # API routes are matched first by the routers above; this only fires
-        # for non-API paths — serve the index.html SPA shell.
+        # API routes are matched first by the routers above; if an unhandled /api path reaches here, 404
+        if full_path.startswith("api/") or full_path == "api":
+            raise HTTPException(status_code=404, detail="API route not found")
         file_path = os.path.join(frontend_dist, full_path)
         if os.path.isfile(file_path):
             return FileResponse(file_path)

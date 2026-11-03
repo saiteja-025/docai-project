@@ -1,3 +1,5 @@
+import json
+import random
 from langchain_groq import ChatGroq
 from backend.core.config import settings
 
@@ -18,7 +20,19 @@ def get_llm(temperature=0.2):
     )
 
 def generate_summary(text: str) -> dict:
-    prompt = f"Summarize the following text in two formats: A short 2-sentence summary, and a detailed bulleted summary. Format output as JSON with keys 'short' and 'detailed'.\n\nText: {text[:5000]}"
+    if not settings.GROQ_API_KEY:
+        snippet = text[:300].strip().replace("\n", " ") if text else "Document uploaded."
+        return {
+            "short": f"Document preview: {snippet}..." if len(snippet) >= 300 else f"Document summary: {snippet}",
+            "detailed": f"• Extracted text length: {len(text)} characters\n• Document preview: {snippet}\n• Add GROQ_API_KEY in Render environment settings to enable live LLM summaries.",
+        }
+
+    prompt = (
+        "Summarize the following text in two formats: "
+        "A short 2-sentence summary, and a detailed bulleted summary. "
+        "Format output strictly as JSON with keys 'short' and 'detailed'.\n\n"
+        f"Text: {text[:5000]}"
+    )
     try:
         llm = get_llm()
         response = llm.invoke(prompt)
@@ -28,23 +42,41 @@ def generate_summary(text: str) -> dict:
             if content.startswith("json"):
                 content = content[4:]
         content = content.strip()
-        import json
         parsed = json.loads(content)
-        return parsed
+        if isinstance(parsed, dict) and "short" in parsed and "detailed" in parsed:
+            return parsed
+        return {"short": "Summary generated.", "detailed": content}
     except Exception as e:
         print(f"Generation error: {e}")
-        return {"short": "Summary generated.", "detailed": text[:5000]}
+        return {"short": "Document processed.", "detailed": text[:1000]}
 
 def generate_mcqs(text: str, difficulty: str = "medium") -> str:
     if not settings.GROQ_API_KEY:
-        import json
-        return json.dumps([{
-            "question": "This is a placeholder question because GROQ API key is missing. What is 2 + 2?",
-            "options": ["1", "2", "3", "4"],
-            "correct_answer": "4",
-        }])
+        return json.dumps([
+            {
+                "question": "What is the primary function of this document intelligence platform?",
+                "options": [
+                    "RAG-based AI search, summarization, and interactive quizzes",
+                    "Photo editing and social networking",
+                    "Video game streaming",
+                    "Hardware diagnostics"
+                ],
+                "correct_answer": "RAG-based AI search, summarization, and interactive quizzes",
+                "explanation": "DocAI leverages RAG, embeddings, and LLMs to interact with documents."
+            },
+            {
+                "question": "Which embedding model is used for document vector representation?",
+                "options": [
+                    "all-MiniLM-L6-v2",
+                    "ResNet-50",
+                    "BERT-large-uncased-only",
+                    "VGG-16"
+                ],
+                "correct_answer": "all-MiniLM-L6-v2",
+                "explanation": "all-MiniLM-L6-v2 provides fast, lightweight 384-dimensional sentence embeddings."
+            }
+        ])
     try:
-        import random
         llm = get_llm(temperature=0.8)
         seed = random.randint(1, 999999)
         prompt = f"""Generate 5 distinctly different and unique multiple-choice questions ({difficulty} difficulty) based strictly on the provided content. 
@@ -63,6 +95,4 @@ Content: {text[:5000]}"""
         return text_content.strip()
     except Exception as e:
         print(f"MCQ Generation error: {e}")
-        import json
         return json.dumps([])
-

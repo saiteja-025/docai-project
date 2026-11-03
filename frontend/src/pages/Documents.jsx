@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FileText, UploadCloud, Loader2, CheckCircle2, AlertCircle, Trash2 } from 'lucide-react';
+import { FileText, UploadCloud, Loader2, CheckCircle2, AlertCircle, Trash2, Eye, Download, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
@@ -11,6 +11,7 @@ export default function Documents() {
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isLoadingList, setIsLoadingList] = useState(true);
+  const [activeDetailDoc, setActiveDetailDoc] = useState(null);
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
 
@@ -30,7 +31,7 @@ export default function Documents() {
 
   useEffect(() => {
     fetchDocuments();
-    // Optional: Poll every 10s if any doc is 'processing'
+    // Poll every 10s if any doc is 'processing'
     const interval = setInterval(() => {
       setDocuments((currentDocs) => {
         if (currentDocs.some(d => d.status === 'processing')) {
@@ -43,8 +44,15 @@ export default function Documents() {
   }, []);
 
   const handleUpload = async (file) => {
-    if (!file || !file.name.endsWith('.pdf')) {
-      alert("Please upload a PDF file.");
+    if (!file) return;
+    const lowerName = file.name.toLowerCase();
+    if (!lowerName.endsWith('.pdf') && !lowerName.endsWith('.docx') && !lowerName.endsWith('.txt')) {
+      alert("Please upload a PDF, DOCX, or TXT file.");
+      return;
+    }
+
+    if (file.size > 25 * 1024 * 1024) {
+      alert("File size exceeds 25 MB. Please select a smaller file.");
       return;
     }
 
@@ -60,13 +68,12 @@ export default function Documents() {
           'Content-Type': 'multipart/form-data'
         }
       });
-      fetchDocuments(); // Refresh the list
+      fetchDocuments();
     } catch (err) {
       console.error("Upload failed", err);
       alert(err.response?.data?.detail || "Upload failed. Please try again.");
     } finally {
       setIsUploading(false);
-      // Reset input
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
@@ -89,8 +96,8 @@ export default function Documents() {
     
     try {
       const token = localStorage.getItem('docToken');
-      // Optimistic delete for immediate feedback
       setDocuments(prev => prev.filter(d => d.id !== docId));
+      if (activeDetailDoc?.id === docId) setActiveDetailDoc(null);
       
       await axios.delete(`${API_BASE_URL}/documents/${docId}`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -99,7 +106,18 @@ export default function Documents() {
     } catch (err) {
       console.error("Failed to delete document", err);
       alert("Failed to delete document.");
-      fetchDocuments(); // restore if failed
+      fetchDocuments();
+    }
+  };
+
+  const cleanText = (val) => {
+    if (!val) return null;
+    try {
+      const parsed = JSON.parse(val);
+      if (typeof parsed === 'string') return parsed;
+      return JSON.stringify(parsed, null, 2);
+    } catch {
+      return val;
     }
   };
 
@@ -119,7 +137,7 @@ export default function Documents() {
       >
         <input 
           type="file" 
-          accept=".pdf"
+          accept=".pdf,.docx,.txt"
           ref={fileInputRef}
           onChange={(e) => handleUpload(e.target.files[0])}
           className="hidden" 
@@ -136,8 +154,8 @@ export default function Documents() {
             <div className="w-20 h-20 rounded-full bg-blue-500/10 flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-blue-500/20 transition-all duration-300">
               <UploadCloud className="text-blue-600 dark:text-blue-400" size={36} />
             </div>
-            <h3 className="text-2xl font-bold mb-3 text-foreground">Click or drag a PDF here</h3>
-            <p className="text-muted-foreground max-w-md text-base">Let our AI unlock insights, generate flashcards, and prepare conversational contexts.</p>
+            <h3 className="text-2xl font-bold mb-3 text-foreground">Click or drag a file here</h3>
+            <p className="text-muted-foreground max-w-md text-base">Support for PDF, DOCX, and TXT files up to 25 MB. Let our AI unlock insights, generate flashcards, and prepare conversational contexts.</p>
             <button 
               onClick={() => fileInputRef.current?.click()}
               className="mt-8 bg-foreground hover:bg-foreground/90 text-background px-8 py-3 rounded-xl font-bold active:scale-95 transition-all shadow-lg shadow-black/10"
@@ -206,19 +224,42 @@ export default function Documents() {
                     <p className="text-xs text-muted-foreground mt-2">
                       Uploaded on {new Date(doc.created_at).toLocaleDateString()}
                     </p>
+                    {doc.summary_short && (
+                      <p className="text-xs text-muted-foreground/80 mt-2 line-clamp-2 italic">
+                        &ldquo;{cleanText(doc.summary_short)}&rdquo;
+                      </p>
+                    )}
                   </div>
                   
-                  <div className="mt-6 flex gap-2">
+                  <div className="mt-6 flex items-center gap-2">
                     <button 
                       disabled={doc.status !== 'ready'}
                       className="flex-1 bg-secondary text-secondary-foreground hover:bg-secondary/80 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() => navigate('/chat', { state: { selectedDocId: doc.id } })}
                     >
-                      Chat With Doc
+                      Chat
                     </button>
                     <button 
+                      onClick={() => setActiveDetailDoc(doc)}
+                      className="p-2 bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 rounded-lg transition-colors"
+                      title="View Summary & Details"
+                    >
+                      <Eye size={16} />
+                    </button>
+                    {doc.cloudinary_url && doc.cloudinary_url.startsWith('http') && (
+                      <a
+                        href={doc.cloudinary_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 rounded-lg transition-colors"
+                        title="Download Document"
+                      >
+                        <Download size={16} />
+                      </a>
+                    )}
+                    <button 
                       onClick={(e) => handleDelete(e, doc.id)}
-                      className="px-3 bg-red-500/5 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+                      className="p-2 bg-red-500/5 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
                       title="Delete Document"
                     >
                       <Trash2 size={16} />
@@ -230,6 +271,86 @@ export default function Documents() {
           </div>
         )}
       </div>
+
+      {/* Details & Summary Modal */}
+      <AnimatePresence>
+        {activeDetailDoc && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-card border border-border rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-hidden flex flex-col shadow-2xl"
+            >
+              <div className="p-6 border-b border-border flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-500/10 rounded-lg text-blue-500">
+                    <FileText size={20} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg text-foreground line-clamp-1">{activeDetailDoc.title}</h3>
+                    <p className="text-xs text-muted-foreground">Uploaded {new Date(activeDetailDoc.created_at).toLocaleString()}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setActiveDetailDoc(null)}
+                  className="p-2 text-muted-foreground hover:text-foreground rounded-lg"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="p-6 overflow-y-auto space-y-6">
+                <div>
+                  <h4 className="text-xs uppercase tracking-wider font-bold text-muted-foreground mb-2">Short Summary</h4>
+                  <div className="p-4 rounded-xl bg-background border border-border text-sm leading-relaxed text-foreground">
+                    {cleanText(activeDetailDoc.summary_short) || "Summary being generated by AI..."}
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="text-xs uppercase tracking-wider font-bold text-muted-foreground mb-2">Detailed Insights</h4>
+                  <div className="p-4 rounded-xl bg-background border border-border text-sm leading-relaxed text-foreground whitespace-pre-wrap">
+                    {cleanText(activeDetailDoc.summary_detailed) || "Detailed analysis will appear once processed."}
+                  </div>
+                </div>
+
+                {activeDetailDoc.cloudinary_url && activeDetailDoc.cloudinary_url.startsWith('http') && (
+                  <div className="pt-2">
+                    <a
+                      href={activeDetailDoc.cloudinary_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition-colors"
+                    >
+                      <Download size={16} /> Download Original File
+                    </a>
+                  </div>
+                )}
+              </div>
+
+              <div className="p-4 border-t border-border bg-card/50 flex justify-end gap-2">
+                <button
+                  onClick={() => {
+                    const id = activeDetailDoc.id;
+                    setActiveDetailDoc(null);
+                    navigate('/chat', { state: { selectedDocId: id } });
+                  }}
+                  className="px-4 py-2 bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-xl text-sm font-semibold transition-colors"
+                >
+                  Open Chat
+                </button>
+                <button
+                  onClick={() => setActiveDetailDoc(null)}
+                  className="px-4 py-2 bg-foreground text-background rounded-xl text-sm font-semibold transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

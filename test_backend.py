@@ -1,7 +1,7 @@
 import requests
 import os
 
-BASE_URL = "http://localhost:8000/api/v1"
+BASE_URL = os.environ.get("BASE_URL", "http://localhost:8000/api/v1")
 
 def run_tests():
     print("starting test...")

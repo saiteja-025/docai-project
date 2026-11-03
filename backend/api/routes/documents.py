@@ -9,6 +9,8 @@ from backend.services.generation_service import generate_summary
 
 router = APIRouter()
 
+MAX_FILE_SIZE = 25 * 1024 * 1024  # 25 MB limit
+
 def process_document_background(file_bytes: bytes, doc_id: int, filename: str):
     from backend.db.session import SessionLocal
     db = SessionLocal()
@@ -56,6 +58,8 @@ async def upload_document(
         raise HTTPException(status_code=400, detail="Only PDF, DOCX, and TXT files are supported.")
     
     file_bytes = await file.read()
+    if len(file_bytes) > MAX_FILE_SIZE:
+        raise HTTPException(status_code=400, detail="File size exceeds the 25 MB limit.")
     
     # 1. Upload to Cloudinary
     cloudinary_url = upload_pdf_to_cloudinary(file_bytes, file.filename)
@@ -78,8 +82,34 @@ async def upload_document(
 
 @router.get("/")
 def get_documents(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    docs = db.query(Document).filter(Document.owner_id == current_user.id).all()
-    return [{"id": d.id, "title": d.title, "status": d.status, "created_at": d.created_at} for d in docs]
+    docs = db.query(Document).filter(Document.owner_id == current_user.id).order_by(Document.created_at.desc()).all()
+    return [
+        {
+            "id": d.id,
+            "title": d.title,
+            "status": d.status,
+            "cloudinary_url": d.cloudinary_url,
+            "summary_short": d.summary_short,
+            "summary_detailed": d.summary_detailed,
+            "created_at": d.created_at,
+        }
+        for d in docs
+    ]
+
+@router.get("/{doc_id}")
+def get_document(doc_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    doc = db.query(Document).filter(Document.id == doc_id, Document.owner_id == current_user.id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found.")
+    return {
+        "id": doc.id,
+        "title": doc.title,
+        "status": doc.status,
+        "cloudinary_url": doc.cloudinary_url,
+        "summary_short": doc.summary_short,
+        "summary_detailed": doc.summary_detailed,
+        "created_at": doc.created_at,
+    }
 
 @router.delete("/{doc_id}")
 def delete_document(doc_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
@@ -87,7 +117,7 @@ def delete_document(doc_id: int, db: Session = Depends(get_db), current_user: Us
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found.")
     
-    # Explicitly clear dependent records to ensure SQLite does not leave orphaned files or throw if constraints applied
+    # Explicitly clear dependent records to ensure SQLite / PostgreSQL does not leave orphaned records
     from backend.db.models import ChatSession, Quiz, ChatMessage, QuizResult
     chat_sessions = db.query(ChatSession).filter(ChatSession.document_id == doc_id).all()
     for cs in chat_sessions:
