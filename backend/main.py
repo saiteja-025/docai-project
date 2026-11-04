@@ -1,10 +1,28 @@
+import os
+import sys
+import time
 from contextlib import asynccontextmanager
+
+# ---------------------------------------------------------------------------
+# Python Path Bootstrap:
+# Guarantees that absolute package imports (`from backend.core...`) resolve
+# regardless of whether the server is started from the project root:
+#   `uvicorn backend.main:app`
+# or from inside the backend directory:
+#   `uvicorn main:app` (e.g. Render Root Directory = backend)
+# ---------------------------------------------------------------------------
+_current_dir = os.path.dirname(os.path.abspath(__file__))
+_parent_dir = os.path.dirname(_current_dir)
+
+if _parent_dir not in sys.path:
+    sys.path.insert(0, _parent_dir)
+if _current_dir not in sys.path:
+    sys.path.insert(0, _current_dir)
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-import os
-import time
 
 from backend.core.config import settings
 
