@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 import json
 from backend.db.session import get_db
-from backend.db.models import User, Document
+from backend.db.models import User, Document, Quiz, QuizResult
 from backend.api.deps import get_current_user
 from backend.services.generation_service import generate_mcqs
 
@@ -37,10 +37,15 @@ def get_quiz(
     try:
         mcqs_json_str = generate_mcqs(text_to_quiz, difficulty)
         mcqs_list = json.loads(mcqs_json_str)
+        if not isinstance(mcqs_list, list) or len(mcqs_list) == 0:
+            raise ValueError("Groq returned empty or invalid question array.")
         return {"questions": mcqs_list}
     except Exception as e:
         print(f"Error serving quiz: {e}")
-        return {"questions": [{"question": "Error generating quiz", "options": [], "correct_answer": "", "explanation": "See backend logs."}]}
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate quiz with Groq AI: {str(e)}"
+        )
 
 @router.post("/submit")
 def submit_quiz(
@@ -48,15 +53,14 @@ def submit_quiz(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    from backend.db.models import QuizResult
-    # quiz_id=0 is not a valid FK reference; store None (column is nullable)
+    # If quiz_id is 0 or invalid FK, set to None so PostgreSQL does not violate foreign key constraint
     valid_quiz_id = request.quiz_id if request.quiz_id and request.quiz_id > 0 else None
     result = QuizResult(
-        quiz_id=valid_quiz_id,
         user_id=current_user.id,
+        quiz_id=valid_quiz_id,
         score=request.score,
         answers_json=request.answers_json
     )
     db.add(result)
     db.commit()
-    return {"message": "Quiz result saved successfully."}
+    return {"message": "Quiz submitted successfully."}

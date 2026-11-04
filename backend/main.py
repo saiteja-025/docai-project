@@ -24,8 +24,8 @@ async def lifespan(app: FastAPI):
     if not settings.GROQ_API_KEY:
         print(
             "[WARNING] GROQ_API_KEY is NOT set.\n"
-            "  AI chat, summarisation, and quiz generation will return mock responses.\n"
-            "  Set GROQ_API_KEY in your environment / Render dashboard to enable AI features."
+            "  AI features (Chat, Summarisation, Quizzes) require a valid Groq API key.\n"
+            "  Provide GROQ_API_KEY in your environment to enable real Groq LLM functionality."
         )
     else:
         print("[OK] GROQ_API_KEY is configured — AI features enabled.")
@@ -38,8 +38,8 @@ async def lifespan(app: FastAPI):
     if not has_cloudinary:
         print(
             "[WARNING] Cloudinary credentials are NOT set.\n"
-            "  Uploaded files will NOT be stored in the cloud (mock URLs will be used).\n"
-            "  Set CLOUDINARY_URL or CLOUDINARY_CLOUD_NAME/KEY/SECRET in Render dashboard to enable cloud storage."
+            "  PDF cloud uploads require valid Cloudinary credentials.\n"
+            "  Set CLOUDINARY_URL or CLOUDINARY_CLOUD_NAME/KEY/SECRET in environment."
         )
     else:
         print("[OK] Cloudinary is configured — cloud file storage enabled.")
@@ -92,6 +92,23 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Health Check
+@app.get("/health", tags=["Health"])
+@app.get(f"{settings.API_V1_STR}/health", tags=["Health"])
+def health_check():
+    has_cloudinary = bool(
+        settings.CLOUDINARY_URL or
+        os.environ.get("CLOUDINARY_URL") or
+        (os.environ.get("CLOUDINARY_CLOUD_NAME") and os.environ.get("CLOUDINARY_API_KEY"))
+    )
+    return {
+        "status": "healthy",
+        "project": settings.PROJECT_NAME,
+        "version": settings.VERSION,
+        "groq_configured": bool(settings.GROQ_API_KEY),
+        "cloudinary_configured": has_cloudinary,
+    }
 
 # Routers
 from backend.api.routes import auth, documents, chat, quiz, dashboard

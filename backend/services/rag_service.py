@@ -256,5 +256,9 @@ def chat_with_document(doc_id: str, query: str, chat_history: list = None) -> st
         else:
             formatted_history.append(AIMessage(content=content))
 
-    response = rag_chain.invoke({"input": query, "chat_history": formatted_history})
-    return response["answer"]
+    try:
+        response = rag_chain.invoke({"input": query, "chat_history": formatted_history})
+        return response["answer"]
+    except Exception as e:
+        print(f"[RAG] Chain execution error: {e}")
+        return f"Error communicating with Groq AI service: {str(e)}"

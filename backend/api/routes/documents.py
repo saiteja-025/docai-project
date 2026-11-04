@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from backend.db.session import get_db
 from backend.db.models import User, Document
 from backend.api.deps import get_current_user
-from backend.services.cloudinary_service import upload_pdf_to_cloudinary
+from backend.services.cloudinary_service import upload_pdf_to_cloudinary, delete_from_cloudinary
 from backend.services.rag_service import process_and_store_document
 from backend.services.generation_service import generate_summary
 
@@ -65,7 +65,13 @@ async def upload_document(
         raise HTTPException(status_code=400, detail="File size exceeds the 25 MB limit.")
     
     # 1. Upload to Cloudinary
-    cloudinary_url = upload_pdf_to_cloudinary(file_bytes, file.filename)
+    try:
+        cloudinary_url = upload_pdf_to_cloudinary(file_bytes, file.filename)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Cloudinary upload failed: {str(e)}"
+        )
     
     # 2. Create DB Record
     doc = Document(
@@ -134,4 +140,9 @@ def delete_document(doc_id: int, db: Session = Depends(get_db), current_user: Us
 
     db.delete(doc)
     db.commit()
+
+    # Delete physical file from Cloudinary storage
+    if doc.cloudinary_url:
+        delete_from_cloudinary(doc.cloudinary_url)
+
     return {"message": "Document deleted successfully."}
