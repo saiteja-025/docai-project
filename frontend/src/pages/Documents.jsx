@@ -31,7 +31,7 @@ export default function Documents() {
 
   useEffect(() => {
     fetchDocuments();
-    // Poll every 10s if any doc is 'processing'
+    // Poll every 5s while any doc is 'processing' — fast feedback
     const interval = setInterval(() => {
       setDocuments((currentDocs) => {
         if (currentDocs.some(d => d.status === 'processing')) {
@@ -39,7 +39,7 @@ export default function Documents() {
         }
         return currentDocs;
       });
-    }, 10000);
+    }, 5000);
     return () => clearInterval(interval);
   }, []);
 
