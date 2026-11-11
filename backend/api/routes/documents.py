@@ -64,15 +64,15 @@ async def upload_document(
     if len(file_bytes) > MAX_FILE_SIZE:
         raise HTTPException(status_code=400, detail="File size exceeds the 25 MB limit.")
     
-    # 1. Upload to Cloudinary
+    # 1. Upload to Cloudinary (non-fatal — document text extraction works without it)
+    cloudinary_url = None
     try:
         cloudinary_url = upload_pdf_to_cloudinary(file_bytes, file.filename)
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Cloudinary upload failed: {str(e)}"
-        )
-    
+        # Log but do not block — document content is still processed and stored in PostgreSQL
+        print(f"[Upload] Cloudinary storage skipped (non-fatal): {e}")
+        cloudinary_url = f"local://{file.filename}"
+
     # 2. Create DB Record
     doc = Document(
         title=file.filename,

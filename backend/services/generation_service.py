@@ -8,10 +8,20 @@ def get_llm(temperature=0.2):
         raise ValueError("GROQ_API_KEY is not configured. Please provide a valid Groq API key.")
     return ChatGroq(
         groq_api_key=settings.GROQ_API_KEY,
-        model_name="llama-3.3-70b-versatile", 
+        model_name="llama-3.3-70b-versatile",
         temperature=temperature,
         max_tokens=2048,
     )
+
+def _extract_json_from_response(content: str) -> str:
+    """Strip markdown code fences and return raw JSON string."""
+    if "```" in content:
+        parts = content.split("```")
+        # The fenced block is usually parts[1]
+        content = parts[1] if len(parts) > 1 else parts[0]
+        if content.startswith("json"):
+            content = content[4:]
+    return content.strip()
 
 def generate_summary(text: str) -> dict:
     if not settings.GROQ_API_KEY:
@@ -25,16 +35,17 @@ def generate_summary(text: str) -> dict:
     )
     llm = get_llm()
     response = llm.invoke(prompt)
-    content = response.content
-    if "```" in content:
-        content = content.split("```")[1]
-        if content.startswith("json"):
-            content = content[4:]
-    content = content.strip()
-    parsed = json.loads(content)
-    if isinstance(parsed, dict) and "short" in parsed and "detailed" in parsed:
-        return parsed
-    return {"short": "Summary generated.", "detailed": content}
+    content = _extract_json_from_response(response.content)
+
+    try:
+        parsed = json.loads(content)
+        if isinstance(parsed, dict) and "short" in parsed and "detailed" in parsed:
+            return parsed
+        return {"short": "Summary generated.", "detailed": str(parsed)}
+    except (json.JSONDecodeError, ValueError):
+        # LLM returned plain text — wrap gracefully so the document still becomes "ready"
+        short = content[:300] if content else "Summary generated."
+        return {"short": short, "detailed": content}
 
 def generate_mcqs(text: str, difficulty: str = "medium") -> str:
     if not settings.GROQ_API_KEY:
@@ -50,9 +61,4 @@ Return PURELY a JSON array of objects with keys: 'question', 'options' (array of
 
 Content: {text[:5000]}"""
     response = llm.invoke(prompt)
-    text_content = response.content
-    if "```" in text_content:
-        text_content = text_content.split("```")[1]
-        if text_content.startswith("json"):
-            text_content = text_content[4:]
-    return text_content.strip()
+    return _extract_json_from_response(response.content)

@@ -12,11 +12,13 @@ def setup_cloudinary():
     api_secret = os.environ.get("CLOUDINARY_API_SECRET")
 
     if url:
+        # Use the official cloudinary_url parameter — avoids calling private _load_from_url
         os.environ["CLOUDINARY_URL"] = url
         try:
-            cloudinary.config()._load_from_url(url)
-        except Exception:
-            cloudinary.reset_config()
+            cloudinary.config(cloudinary_url=url)
+        except TypeError:
+            # Older SDK versions don't support cloudinary_url kwarg — fall back
+            cloudinary.config()
     elif cloud_name and api_key and api_secret:
         cloudinary.config(
             cloud_name=cloud_name,
